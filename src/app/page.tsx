@@ -1,101 +1,241 @@
+"use client";
+import { useState } from "react";
 import Image from "next/image";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+// Benzersiz ID'ler ile başlangıç tahtası
+const initialBoard = [
+  Array(8).fill(''),
+  Array(8).fill(''),
+  Array(8).fill(''),
+  Array(8).fill(''),
+  Array(8).fill(''),
+  Array(8).fill(''),
+  Array(8).fill(''),
+  ['R1', 'N1', 'B1', 'Q', 'K', 'B2', 'N2', 'R2'], // Beyaz taşlar
+];
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+export default function Home() {
+  const [board, setBoard] = useState(initialBoard);
+  const [selectedPiece, setSelectedPiece] = useState<{row: number, col: number} | null>(null);
+  const [coloredSquares, setColoredSquares] = useState<{
+    pieceId: string;
+    squares: {row: number, col: number}[];
+  }[]>([]);
+  const [isMoving, setIsMoving] = useState(false);
+  const [isGameComplete, setIsGameComplete] = useState(false);
+
+  // Tahtanın tamamen boyanıp boyanmadığını kontrol et
+  const checkGameCompletion = (squares: {pieceId: string, squares: {row: number, col: number}[]}[]) => {
+    const allColoredSquares = new Set();
+    squares.forEach(piece => {
+      piece.squares.forEach(square => {
+        allColoredSquares.add(`${square.row}-${square.col}`);
+      });
+    });
+    // 64 kare (8x8 tahta)
+    if (allColoredSquares.size === 64) {
+      setIsGameComplete(true);
+    }
+  };
+
+  const getPieceImage = (pieceId: string) => {
+    const pieceType = pieceId.charAt(0).toLowerCase();
+    const isWhite = pieceId.charAt(0) === pieceId.charAt(0).toUpperCase();
+    const pieceImages: {[key: string]: string} = {
+      'r': isWhite ? '/white-rook.png' : '/black-rook.png',
+      'n': isWhite ? '/white-knight.png' : '/black-knight.png',
+      'b': isWhite ? '/white-bishop.png' : '/black-bishop.png',
+      'q': isWhite ? '/white-queen.png' : '/black-queen.png',
+      'k': isWhite ? '/white-king.png' : '/black-king.png',
+    };
+    return pieceImages[pieceType];
+  };
+
+  const calculateColoredSquares = (piece: string, row: number, col: number) => {
+    const squares: {row: number, col: number}[] = [];
+
+    switch(piece.toLowerCase()) {
+      case 'r': // Kale
+        // Tüm dikey kareler
+        for (let i = 0; i < 8; i++) {
+          if (i !== row) squares.push({row: i, col});
+        }
+        // Tüm yatay kareler
+        for (let j = 0; j < 8; j++) {
+          if (j !== col) squares.push({row, col: j});
+        }
+        break;
+
+      case 'b': // Fil
+        // Tüm çapraz kareler
+        for (let i = 0; i < 8; i++) {
+          for (let j = 0; j < 8; j++) {
+            if (Math.abs(row - i) === Math.abs(col - j) && (i !== row || j !== col)) {
+              squares.push({row: i, col: j});
+            }
+          }
+        }
+        break;
+
+      case 'n': // At
+        const knightMoves = [
+          [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+          [1, -2], [1, 2], [2, -1], [2, 1]
+        ];
+        knightMoves.forEach(([drow, dcol]) => {
+          const newRow = row + drow;
+          const newCol = col + dcol;
+          if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+            squares.push({row: newRow, col: newCol});
+          }
+        });
+        break;
+
+      case 'q': // Vezir
+        // Kale hareketleri
+        for (let i = 0; i < 8; i++) {
+          if (i !== row) squares.push({row: i, col});
+          if (i !== col) squares.push({row, col: i});
+        }
+        // Fil hareketleri
+        for (let i = 0; i < 8; i++) {
+          for (let j = 0; j < 8; j++) {
+            if (Math.abs(row - i) === Math.abs(col - j) && (i !== row || j !== col)) {
+              squares.push({row: i, col: j});
+            }
+          }
+        }
+        break;
+
+      case 'k': // Şah
+        const kingMoves = [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0, -1],           [0, 1],
+          [1, -1],  [1, 0],  [1, 1]
+        ];
+        kingMoves.forEach(([drow, dcol]) => {
+          const newRow = row + drow;
+          const newCol = col + dcol;
+          if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+            squares.push({row: newRow, col: newCol});
+          }
+        });
+        break;
+
+      case 'p': // Piyon
+        // Beyaz piyon
+        if (piece === 'P') {
+          squares.push({row: row - 1, col: col - 1});
+          squares.push({row: row - 1, col: col + 1});
+        }
+        // Siyah piyon
+        else {
+          squares.push({row: row + 1, col: col - 1});
+          squares.push({row: row + 1, col: col + 1});
+        }
+        break;
+    }
+    return squares;
+  };
+
+  const handlePieceClick = (row: number, col: number) => {
+    if (isGameComplete) return; // Oyun bittiyse tıklamaları engelle
+
+    if (!isMoving && board[row][col] !== '') {
+      setSelectedPiece({ row, col });
+      setIsMoving(true);
+    } else if (isMoving && selectedPiece) {
+      if (board[row][col] === '') {
+        const movingPieceId = board[selectedPiece.row][selectedPiece.col];
+        
+        const newBoard = [...board.map(row => [...row])];
+        newBoard[row][col] = movingPieceId;
+        newBoard[selectedPiece.row][selectedPiece.col] = '';
+        setBoard(newBoard);
+
+        const newSquares = calculateColoredSquares(movingPieceId.charAt(0), row, col);
+        const updatedColoredSquares = coloredSquares.filter(p => p.pieceId !== movingPieceId);
+        const newColoredSquares = [...updatedColoredSquares, { 
+          pieceId: movingPieceId, 
+          squares: newSquares 
+        }];
+        
+        setColoredSquares(newColoredSquares);
+        checkGameCompletion(newColoredSquares);
+      }
+      setSelectedPiece(null);
+      setIsMoving(false);
+    }
+  };
+
+  const isSquareColored = (row: number, col: number) => {
+    return coloredSquares.some(pieceSquares => 
+      pieceSquares.squares.some(square => 
+        square.row === row && square.col === col
+      )
+    );
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="grid grid-cols-8 w-[400px] h-[400px] border-2 border-gray-800">
+        {board.map((row, rowIndex) =>
+          row.map((piece, colIndex) => {
+            const isBlack = (rowIndex + colIndex) % 2 === 1;
+            const isSelected = selectedPiece?.row === rowIndex && selectedPiece?.col === colIndex;
+            const isColored = isSquareColored(rowIndex, colIndex);
+            
+            return (
+              <div
+                key={`${rowIndex}-${colIndex}`}
+                className="relative cursor-pointer w-full h-full"
+                onClick={() => handlePieceClick(rowIndex, colIndex)}
+              >
+                {/* Temel kare (siyah veya beyaz) */}
+                <div className={`absolute inset-0 ${
+                  isBlack ? "bg-gray-100" : "bg-white"
+                }`} />
+                
+                {/* Yeşil overlay */}
+                {isColored && (
+                  <div className="absolute inset-0 bg-green-500/80 mix-blend-multiply" />
+                )}
+                
+                {/* Seçim halkası */}
+                {isSelected && (
+                  <div className="absolute inset-0 ring-2 ring-blue-500" />
+                )}
+                
+                {/* Taş resmi */}
+                {piece && (
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={getPieceImage(piece)}
+                      alt={piece}
+                      fill
+                      className="object-contain p-1"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+      {isGameComplete && (
+        <div className="mt-4 text-2xl font-bold text-green-600">
+          Tebrikler! Tüm tahta boyandı!
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+      <button 
+        className="mt-4 px-4 py-2 bg-red-500 text-white rounded"
+        onClick={() => {
+          setColoredSquares([]);
+          setIsGameComplete(false);
+        }}
+      >
+        Boyaları Temizle
+      </button>
     </div>
   );
 }
