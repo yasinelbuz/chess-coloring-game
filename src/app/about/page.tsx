@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { FaGithub, FaCode, FaChess } from 'react-icons/fa'
+import { FaGithub, FaChess } from 'react-icons/fa'
 
 export default function About() {
   return (
