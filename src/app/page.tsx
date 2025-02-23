@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import Link from 'next/link'
 
 // Benzersiz ID'ler ile başlangıç tahtası
 const initialBoard = [
@@ -177,8 +178,14 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <div className="grid grid-cols-8 w-[400px] h-[400px] border-2 border-gray-800">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      {/* Başlık */}
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+        Satranç Boyama Oyunu
+      </h1>
+
+      {/* Satranç Tahtası - Responsive boyutlar */}
+      <div className="grid grid-cols-8 w-full max-w-[400px] aspect-square border-2 border-gray-800">
         {board.map((row, rowIndex) =>
           row.map((piece, colIndex) => {
             const isBlack = (rowIndex + colIndex) % 2 === 1;
@@ -191,22 +198,18 @@ export default function Home() {
                 className="relative cursor-pointer w-full h-full"
                 onClick={() => handlePieceClick(rowIndex, colIndex)}
               >
-                {/* Temel kare (siyah veya beyaz) */}
                 <div className={`absolute inset-0 ${
                   isBlack ? "bg-gray-100" : "bg-white"
                 }`} />
                 
-                {/* Yeşil overlay */}
                 {isColored && (
                   <div className="absolute inset-0 bg-green-500/80 mix-blend-multiply" />
                 )}
                 
-                {/* Seçim halkası */}
                 {isSelected && (
                   <div className="absolute inset-0 ring-2 ring-blue-500" />
                 )}
                 
-                {/* Taş resmi */}
                 {piece && (
                   <div className="relative w-full h-full">
                     <Image
@@ -214,6 +217,7 @@ export default function Home() {
                       alt={piece}
                       fill
                       className="object-contain p-1"
+                      priority
                     />
                   </div>
                 )}
@@ -222,20 +226,32 @@ export default function Home() {
           })
         )}
       </div>
+
+      {/* Oyun Tamamlandı Mesajı */}
       {isGameComplete && (
-        <div className="mt-4 text-2xl font-bold text-green-600">
+        <div className="mt-4 text-xl md:text-2xl font-bold text-green-600 text-center">
           Tebrikler! Tüm tahta boyandı!
         </div>
       )}
-      <button 
-        className="mt-4 px-4 py-2 bg-red-500 text-white rounded"
-        onClick={() => {
-          setColoredSquares([]);
-          setIsGameComplete(false);
-        }}
-      >
-        Boyaları Temizle
-      </button>
+
+      {/* Butonlar - Mobile uyumlu */}
+      <div className="flex flex-col sm:flex-row gap-3 mt-4">
+        <button 
+          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm md:text-base"
+          onClick={() => {
+            setColoredSquares([]);
+            setIsGameComplete(false);
+          }}
+        >
+          Boyaları Temizle
+        </button>
+        <Link 
+          href="/about" 
+          className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-center text-sm md:text-base"
+        >
+          Hakkında
+        </Link>
+      </div>
     </div>
   );
 }
