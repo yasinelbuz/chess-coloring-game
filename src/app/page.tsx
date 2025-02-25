@@ -163,9 +163,13 @@ export default function Home() {
         
         setColoredSquares(newColoredSquares);
         checkGameCompletion(newColoredSquares);
+        
+        // Taşı yeni konumunda seçili tutmak için
+        setSelectedPiece({ row, col });
+      } else {
+        // Eğer başka bir taşa tıklanırsa, yeni taşı seç
+        setSelectedPiece({ row, col });
       }
-      setSelectedPiece(null);
-      setIsMoving(false);
     }
   };
 
